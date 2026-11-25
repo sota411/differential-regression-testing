@@ -1,0 +1,157 @@
+{
+  "scope": {
+    "current": "架空の words CLI v1。Python 3.11、locale=C。",
+    "candidate": "架空の words CLI v2。Python 3.11、locale=C。",
+    "inventory": "両版の引数定義と変更差分を照合した想定。今回は --limit が下限を外れたときの拒否のみを対象とし、成功時の出力は別スコープに置く。"
+  },
+  "targets": [
+    {
+      "id": "words-limit",
+      "entry": "words --limit -1",
+      "evidence": "v1:words.py:13、v2:words.py:20 の引数定義と負値分岐",
+      "oracle": "live",
+      "execution": "ready",
+      "fixtures": "同じ入力バイト列を標準入力に渡し、locale=C の別プロセスで起動する。",
+      "isolation": "両版とも標準入出力と終了状態のみを使用する。作業ディレクトリはそれぞれ一時領域。",
+      "layers": {
+        "direct": {
+          "status": "required",
+          "evidence": "v1:words.py:15、v2:words.py:23 が終了値とエラーを返す。"
+        },
+        "state": {
+          "status": "na",
+          "evidence": "負値分岐は書き込みを呼ばずに終了する。"
+        },
+        "effects": {
+          "status": "na",
+          "evidence": "引数エラーを標準エラーへ書く経路に外部アダプターがない。"
+        }
+      },
+      "checks": {
+        "legacy": {
+          "status": "na",
+          "evidence": "負値の拒否は両版の CLI 仕様 §2 に明記されている。"
+        },
+        "input": {
+          "status": "risk",
+          "evidence": "仕様 §2 の下限は0。負の境界隣接値を試す。"
+        },
+        "numeric": {
+          "status": "na",
+          "evidence": "この経路は整数の符号を調べ、丸め・演算・格納を行わない。"
+        },
+        "time": {
+          "status": "na",
+          "evidence": "呼び出し先の引数処理に時刻取得がない。"
+        },
+        "text": {
+          "status": "na",
+          "evidence": "両版ともこの分岐のエラーはASCII定数で、入力本文を読まない。"
+        },
+        "order": {
+          "status": "na",
+          "evidence": "この分岐はデータの列挙・ソートを行わず、固定の1行を返す。"
+        },
+        "state": {
+          "status": "na",
+          "evidence": "この分岐は起動時の引数だけを参照する。"
+        },
+        "failure": {
+          "status": "na",
+          "evidence": "拒否は input の R-exit-code と R-stderr で扱う。対象経路には依存先呼び出しや途中失敗の分岐がない。"
+        },
+        "concurrency": {
+          "status": "na",
+          "evidence": "引数の拒否までにワーカーを起動せず、共有状態へのアクセスがない。"
+        },
+        "performance": {
+          "status": "na",
+          "evidence": "負値の拒否はデータ処理前の定数分岐で、仕様 §2 にこの経路の性能基準がない。"
+        },
+        "auth": {
+          "status": "na",
+          "evidence": "このCLIはローカル引数を検証し、利用者の認証や役割で分岐しない。"
+        },
+        "logs": {
+          "status": "na",
+          "evidence": "監査ログの出力がなく、エラーは直接出力として扱う。"
+        }
+      }
+    }
+  ],
+  "observations": [
+    {
+      "id": "O-exit-code",
+      "target": "words-limit",
+      "layer": "direct",
+      "field": "process.exit_code",
+      "evidence": "CLI仕様 §2 のエラー契約",
+      "method": "両側の終了コードを採取する。",
+      "mode": "exact",
+      "predicate": "両側の終了コードが2で一致する。"
+    },
+    {
+      "id": "O-stderr",
+      "target": "words-limit",
+      "layer": "direct",
+      "field": "stderr",
+      "evidence": "CLI仕様 §2 のエラー契約",
+      "method": "両側の標準エラーのバイト列を採取する。",
+      "mode": "exact",
+      "predicate": "両側の標準エラーに invalid_limit と末尾改行1文字がある。"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-exit-code",
+      "observation": "O-exit-code",
+      "dimension": "input",
+      "priority": "normal",
+      "condition": "--limit -1 を渡す。",
+      "expected": "終了コード2で拒否する。",
+      "evidence": "CLI仕様 §2 と現行タグ v1 の負値チェック",
+      "design": {
+        "model": "limit-lower-bound",
+        "values": {
+          "limit": "-1"
+        },
+        "regression": "負値を受理して終了コード0を返す。"
+      }
+    },
+    {
+      "id": "R-stderr",
+      "observation": "O-stderr",
+      "dimension": "input",
+      "priority": "normal",
+      "condition": "--limit -1 を渡す。",
+      "expected": "標準エラーに invalid_limit と改行1文字を出力する。",
+      "evidence": "CLI仕様 §2 と現行タグ v1 の負値チェック",
+      "design": {
+        "model": "limit-lower-bound",
+        "values": {
+          "limit": "-1"
+        },
+        "regression": "終了コード2は返すが標準エラーが空になる。"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "C-negative-limit",
+      "scenario": "固定した標準入力を使い、別プロセスで --limit -1 を渡す。終了後に終了値と標準エラーを採取する。",
+      "steps": [
+        {
+          "id": "invoke",
+          "target": "words-limit",
+          "values": {
+            "limit": "-1"
+          },
+          "covers": [
+            "R-exit-code",
+            "R-stderr"
+          ]
+        }
+      ]
+    }
+  ]
+}

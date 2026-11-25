@@ -1,0 +1,54 @@
+{
+  "models": [
+    {
+      "id": "item-search-routing",
+      "target": "search-routes",
+      "boundary": "routing",
+      "evidence": "架空の検索サービス。旧新のルート定義と公開URLの対応を照合する。",
+      "rows": [
+        {
+          "values": {"method": "GET", "path": "/items"},
+          "evidence": "旧新のルート定義に一覧への入口がある。"
+        },
+        {
+          "values": {"method": "GET", "path": "/legacy-items"},
+          "evidence": "旧新のルート定義に一覧へ転送する互換URLがある。"
+        }
+      ],
+      "outputs": {"direct": ["http.status", "route.destination"]}
+    },
+    {
+      "id": "item-search-query",
+      "target": "search-query",
+      "boundary": "sql",
+      "evidence": "架空の検索クエリ。検索語が長さ0なら絞り込みを外し、値ありなら商品名で絞り込む。",
+      "axes": {"search_term": ["空文字（長さ0）", "tram"]},
+      "outputs": {"direct": ["rows.item_ids", "rows.count"]}
+    },
+    {
+      "id": "item-search-view",
+      "target": "search-view",
+      "boundary": "view",
+      "evidence": "架空の検索画面。画面仕様で0件の案内と次ページの操作可否を定める。",
+      "rows": [
+        {
+          "values": {"results": "0件"},
+          "evidence": "画面仕様 §2。該当する商品がない検索を行う。"
+        },
+        {
+          "values": {"results": "1件・1ページ2件"},
+          "evidence": "画面仕様 §3。1ページの上限の直前でも次ページは無効。"
+        },
+        {
+          "values": {"results": "2件・1ページ2件"},
+          "evidence": "画面仕様 §3。結果が1ページの上限と一致しても次ページは無効。"
+        },
+        {
+          "values": {"results": "3件・1ページ2件"},
+          "evidence": "画面仕様 §3。次ページのある検索結果を表示する。"
+        }
+      ],
+      "outputs": {"direct": ["empty_message.text", "next_page.enabled"]}
+    }
+  ]
+}

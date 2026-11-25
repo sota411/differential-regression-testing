@@ -1,0 +1,21 @@
+{
+  "models": [
+    {
+      "id": "limit-lower-bound",
+      "target": "words-limit",
+      "evidence": "架空のCLI仕様 §2 と両版の負値分岐。今回は下限外の拒否だけを比較する。",
+      "axes": {
+        "limit": [
+          "-1"
+        ]
+      },
+      "boundary": "other",
+      "outputs": {
+        "direct": [
+          "process.exit_code",
+          "stderr"
+        ]
+      }
+    }
+  ]
+}

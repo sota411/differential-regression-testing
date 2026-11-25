@@ -1,0 +1,20 @@
+{
+  "requirements": [
+    {
+      "target": "words-limit",
+      "boundary": "other",
+      "values": {"limit": "-1"},
+      "layer": "direct",
+      "field": "process.exit_code",
+      "evidence": "架空のCLI仕様 §2。負値の拒否は終了コード2で利用側に伝わる。"
+    },
+    {
+      "target": "words-limit",
+      "boundary": "other",
+      "values": {"limit": "-1"},
+      "layer": "direct",
+      "field": "stderr",
+      "evidence": "架空のCLI仕様 §2。利用側は標準エラーの invalid_limit と末尾改行を読む。"
+    }
+  ]
+}
